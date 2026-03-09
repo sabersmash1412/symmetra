@@ -11,9 +11,6 @@ FAU_NUM_TO_NAME_DICT = {1: 'Inner_Brow_Raiser',
                         25: 'Lips_Part',
                         26: 'Jaw_Drop'}
 
-
-
-
 AU_INDEX_LIST = [1, 2, 4, 5, 6, 9, 12, 15, 17, 20, 25, 26]
 
 AU_INDEX_TO_LABEL_INDEX_DICT = {1: 0,

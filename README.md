@@ -32,11 +32,16 @@ A balance value of `0` means both sides are equally activated. A positive value 
 
 ```
 .
-├── application_pipeline.py   # Webcam loop, display logic, orchestration
-├── detector.py               # MediaPipe landmark detection + head pose estimation
-├── facs_utils.py             # FAU detector base class + concrete detector implementations
-├── variables.py              # Landmark index mappings, thresholds, model config
-└── test.py                   # Batch test on a folder of static images
+├── application_pipeline.py     # Webcam loop, display logic, orchestration
+├── detector.py                 # MediaPipe landmark detection + head pose estimation
+├── variables.py                # Landmark index mappings, thresholds, model config
+├── test.py                     # Batch test on a folder of static images
+└── facs_utils/                 # FAU detector package
+    ├── __init__.py                         # Exports all detector classes
+    ├── facs_balance_detector.py            # Abstract base class
+    ├── inner_eyebrow_raiser_detector.py    # AU1
+    ├── lips_part_detector.py               # AU25
+    └── nose_wrinkler_detector.py           # AU9
 ```
 
 ### `detector.py`
@@ -45,16 +50,25 @@ Wraps MediaPipe's Face Landmarker. The `Lm_Detector` class exposes a single `det
 - `yaw_deg`, `pitch_deg`, `roll_deg` — head pose in degrees
 - `R` — 3×3 rotation matrix
 
+### `facs_utils/`
+A Python package containing the abstract base class and one file per FAU detector. Each detector takes the full landmark list and returns a signed float indicating left/right activation asymmetry.
 
-### `facs_utils.py`
-Contains the abstract base class `FACS_balance_detector` and all concrete FAU detector implementations. Each detector takes the full landmark list and returns a signed float indicating left/right activation asymmetry.
+#### `facs_balance_detector.py`
+Defines the abstract base class `FACS_balance_detector`. All detectors inherit from this and must implement `get_FACS_balance_val`. The base class also provides the `get_centroid` helper for computing the mean position of a landmark cluster.
 
-Currently implemented detectors:
-| Class | FAU | Description |
-|---|---|---|
-| `INNER_EYEBROW_RAISER_DETECTOR` | AU1 | Compares vertical centroid position of inner brow landmarks |
-| `LIPS_PART_DETECTOR` | AU25 | Computes lip opening gap area on each side |
-| `NOSE_WRINKLER_DETECTOR` | AU9 | Measures landmark cluster tightness on each nostril side |
+#### Implemented detectors
+
+| File | Class | FAU | Description |
+|---|---|---|---|
+| `inner_eyebrow_raiser_detector.py` | `INNER_EYEBROW_RAISER_DETECTOR` | AU1 | Compares vertical centroid position of inner brow landmarks |
+| `lips_part_detector.py` | `LIPS_PART_DETECTOR` | AU25 | Computes lip opening gap on each side via interpolated y-profile |
+| `nose_wrinkler_detector.py` | `NOSE_WRINKLER_DETECTOR` | AU9 | Measures landmark cluster tightness on each nostril side |
+
+#### `__init__.py`
+Re-exports all detector classes so they can be imported directly from the package:
+```python
+from facs_utils import INNER_EYEBROW_RAISER_DETECTOR, LIPS_PART_DETECTOR, NOSE_WRINKLER_DETECTOR
+```
 
 ### `variables.py`
 Central configuration file. Contains:
@@ -67,8 +81,6 @@ Central configuration file. Contains:
 Main webcam application. Captures frames, runs landmark detection, checks frontality, and renders FAU balance values as a text overlay on the live feed.
 
 ### `test.py`
-This script is for testing of the effect of each FAU balance detector. 
-
 Batch processing script for static images. Reads images from `./data/facial_palsy_patient_img/not_labelled/`, runs detection, draws highlighted landmarks and FAU balance values, and saves labelled outputs to `./data/facial_palsy_patient_img/labelled/`.
 
 ---
@@ -96,7 +108,7 @@ python application_pipeline.py
 - Only computes values when the face is frontal (within yaw/pitch/roll thresholds)
 - Press `q` to quit
 
-### Image based FAU balance testing
+### Image-based FAU balance testing
 
 ```bash
 python test.py
@@ -128,23 +140,25 @@ Add entries to both `AU_TO_LM_ARR_DICT_LEFT` and `AU_TO_LM_ARR_DICT_RIGHT` for y
 
 AU_TO_LM_ARR_DICT_LEFT = {
     # ... existing entries ...
-    "Lip_Corner_Puller": [61, 185, 40, 39],   # ← add your new entry
+    "Lip_Corner_Puller": [61, 185, 40, 39],    # ← add your new entry
 }
 
 AU_TO_LM_ARR_DICT_RIGHT = {
     # ... existing entries ...
-    "Lip_Corner_Puller": [291, 409, 270, 269], # ← mirrored equivalent
+    "Lip_Corner_Puller": [291, 409, 270, 269],  # ← mirrored equivalent
 }
 ```
 
 > **Tip:** For AUs involving area or opening (like lips), store indices as a list of lists — `[upper_indices, lower_indices]` — as done for `Lips_Part`. For point-cluster AUs, a flat list is sufficient.
 
-### Step 2 — Implement the detector class in `facs_utils.py`
+### Step 2 — Create a new detector file in `facs_utils/`
 
-Subclass `FACS_balance_detector` and implement `get_FACS_balance_val`. The method receives the full 478-landmark list and must return a signed float.
+Add a new file, e.g. `facs_utils/lip_corner_puller_detector.py`. Subclass `FACS_balance_detector` and implement `get_FACS_balance_val`. The method receives the full 478-landmark list and must return a signed float.
 
 ```python
-# facs_utils.py
+# facs_utils/lip_corner_puller_detector.py
+
+from .facs_balance_detector import FACS_balance_detector
 
 class LIP_CORNER_PULLER_DETECTOR(FACS_balance_detector):
     def __init__(self):
@@ -157,10 +171,25 @@ class LIP_CORNER_PULLER_DETECTOR(FACS_balance_detector):
                    negative = left more activated,
                    0        = balanced
         """
-        left_centroid  = get_centroid(landmarks, AU_TO_LM_ARR_DICT_LEFT[self.name])
-        right_centroid = get_centroid(landmarks, AU_TO_LM_ARR_DICT_RIGHT[self.name])
+        left_centroid  = self.get_centroid(landmarks, self.left_landmark_arr)
+        right_centroid = self.get_centroid(landmarks, self.right_landmark_arr)
 
-        # Example: compare horizontal displacement from resting position
         # Adjust the geometry to suit the AU's physical motion
         return float(left_centroid[0] - right_centroid[0]) * 100
+```
+
+### Step 3 — Export the class in `facs_utils/__init__.py`
+
+```python
+# facs_utils/__init__.py
+
+from .inner_eyebrow_raiser_detector import INNER_EYEBROW_RAISER_DETECTOR
+from .lips_part_detector import LIPS_PART_DETECTOR
+from .nose_wrinkler_detector import NOSE_WRINKLER_DETECTOR
+from .lip_corner_puller_detector import LIP_CORNER_PULLER_DETECTOR  # ← add this
+```
+
+The new detector will then be importable anywhere via:
+```python
+from facs_utils import LIP_CORNER_PULLER_DETECTOR
 ```

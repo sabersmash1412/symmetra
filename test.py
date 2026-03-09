@@ -18,7 +18,7 @@ detector_list = [LIPS_PART_DETECTOR(), INNER_EYEBROW_RAISER_DETECTOR(), NOSE_WRI
 
 
 
-img_folder_path = "./data/facial_palsy_patient_img"
+img_folder_path = "./data/normal"
 detector = Lm_Detector()
 
 for img_filename in tqdm(os.listdir(os.path.join(img_folder_path, "not_labelled")), desc="detect landmarks in images: "):

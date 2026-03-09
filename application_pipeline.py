@@ -3,8 +3,6 @@ from variables import AU_TO_LM_ARR_DICT_LEFT, AU_TO_LM_ARR_DICT_RIGHT, FAU_NUM_T
 from facs_utils import NOSE_WRINKLER_DETECTOR, INNER_EYEBROW_RAISER_DETECTOR, LIPS_PART_DETECTOR
 
 import cv2
-import numpy as np
-import mediapipe as mp
 
 # Compute and draw FACS balance values (top-left)
 font       = cv2.FONT_HERSHEY_SIMPLEX
