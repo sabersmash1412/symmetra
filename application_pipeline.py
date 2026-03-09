@@ -1,4 +1,4 @@
-from mediapipe_detector import Lm_Detector
+from detector import Lm_Detector
 from variables import AU_TO_LM_ARR_DICT_LEFT, AU_TO_LM_ARR_DICT_RIGHT, FAU_NUM_TO_NAME_DICT, YAW_THRESHOLD_DEG, PITCH_THRESHOLD_DEG, ROW_THRESHOLD_DEG
 from facs_utils import NOSE_WRINKLER_DETECTOR, INNER_EYEBROW_RAISER_DETECTOR, LIPS_PART_DETECTOR
 

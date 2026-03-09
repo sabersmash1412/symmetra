@@ -1,6 +1,6 @@
 from application_pipeline import get_facs_balance_val
 from facs_utils import LIPS_PART_DETECTOR, INNER_EYEBROW_RAISER_DETECTOR, NOSE_WRINKLER_DETECTOR
-from mediapipe_detector import Lm_Detector
+from detector import Lm_Detector
 from variables import AU_TO_LM_ARR_DICT_LEFT, AU_TO_LM_ARR_DICT_RIGHT
 
 import os
