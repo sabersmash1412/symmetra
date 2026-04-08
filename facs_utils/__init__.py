@@ -1,3 +1,7 @@
 from .inner_eyebrow_raiser_detector import INNER_EYEBROW_RAISER_DETECTOR
 from .lips_part_detector import LIPS_PART_DETECTOR
 from .nose_wrinkler_detector import NOSE_WRINKLER_DETECTOR
+
+
+FACS_IMBALANCE_DETECTOR_LIST = [LIPS_PART_DETECTOR, INNER_EYEBROW_RAISER_DETECTOR, NOSE_WRINKLER_DETECTOR]
+
