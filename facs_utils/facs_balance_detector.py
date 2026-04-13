@@ -29,3 +29,5 @@ class FACS_balance_detector(ABC):
         """
         ...
 
+    def get_landmark_values(self, landmarks, indices):
+        return np.array([[landmarks[i].x, landmarks[i].y] for i in indices])

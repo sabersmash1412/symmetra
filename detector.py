@@ -105,6 +105,8 @@ class Lm_Detector:
 
         result = self._detector.detect(mp_image)
 
+        # print(f"Detected {len(result.face_landmarks)} faces")
+
         matrix_raw = result.facial_transformation_matrixes[0]
 
         M = np.array(matrix_raw.data).reshape(4, 4)

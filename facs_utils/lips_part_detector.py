@@ -35,7 +35,7 @@ class LIPS_PART_DETECTOR(FACS_balance_detector):
 
     def get_FACS_balance_val(self, landmarks) -> float:
         """
-        Positive = right lip opening larger, negative = left lip opening larger.
+        Positive = right lip opening smaller, negative = left lip opening smaller.
         """
 
         left_area  = self._get_lip_opening_area(landmarks, self.left_landmark_arr)
@@ -44,5 +44,5 @@ class LIPS_PART_DETECTOR(FACS_balance_detector):
         left_area  = max(0.0, left_area  - CLOSED_THRESHOLD)
         right_area = max(0.0, right_area - CLOSED_THRESHOLD)
 
-        return float(right_area - left_area) * 1000
+        return float(left_area - right_area) * 1000
 

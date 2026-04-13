@@ -18,12 +18,11 @@ class NOSE_WRINKLER_DETECTOR(FACS_balance_detector):
 
     def get_FACS_balance_val(self, landmarks) -> float:
         """
-        Positive = right more activated, negative = left more activated.
         More wrinkled → landmarks cluster tighter → smaller spread.
         """
         left_spread  = self._get_cluster_tightness(landmarks, self.left_landmark_arr)
         right_spread = self._get_cluster_tightness(landmarks, self.right_landmark_arr)
 
         # Invert: smaller spread = more activated, so negate
-        return float(left_spread - right_spread) * 1000
+        return float(right_spread - left_spread) * 1000
 

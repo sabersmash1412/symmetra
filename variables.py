@@ -83,6 +83,11 @@ AU_TO_LM_ARR_DICT_LEFT = {
          47, 114, 174,
          126, 217, 
         209, 198, 236, 3
+    ],
+    "Lip_Corner_Puller": [
+        [62], # lip corner
+        [50, 36, 205, 206, 
+         207, 187, 216]   # cheek
     ]
 }
 
@@ -116,6 +121,11 @@ AU_TO_LM_ARR_DICT_RIGHT = {
          277, 437, 
          355, 
         429, 420, 456, 248
+    ],
+    "Lip_Corner_Puller": [
+        [291], # lip corner
+        [266, 280, 425, 411, 
+         427, 436, 427]   # cheek
     ]
 }
 

@@ -1,0 +1,8 @@
+*.png
+*.zip
+*.pyc
+*.jpg
+
+data/YouTube-Facial-Palsy-Database/
+
+__pycache__/

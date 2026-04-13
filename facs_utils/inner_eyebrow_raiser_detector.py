@@ -15,4 +15,4 @@ class INNER_EYEBROW_RAISER_DETECTOR(FACS_balance_detector):
         left_centroid = self.get_centroid(landmarks, self.left_landmark_arr)
         right_centroid = self.get_centroid(landmarks, self.right_landmark_arr)
 
-        return (left_centroid[1] - right_centroid[1]) * 100
+        return (right_centroid[1] - left_centroid[1]) * 100

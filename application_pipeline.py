@@ -20,30 +20,7 @@ def ensure_flat(indexes):
         return [idx for sublist in indexes for idx in sublist]
     return list(indexes)
 
-
-def draw_landmarks(frame, face_landmarks, highlight_indexes=None, highlight_color=(0, 255, 0)):
-    """Draw face landmarks on frame. Highlighted indexes drawn red, rest green."""
-    
-    if highlight_indexes is None:
-        highlight_indexes = []
-
-    highlight_indexes = ensure_flat(highlight_indexes)
-
-
-    print(highlight_indexes)
-
-
-    h, w = frame.shape[:2]
-
-    for idx in highlight_indexes:
-        
-        lm = face_landmarks[idx]
-        x = int(lm.x * w)
-        y = int(lm.y * h)
-        cv2.circle(frame, (x, y), 1, highlight_color, -1)
-
-    return frame
-
+IMBALANCE_DISPLAY_THRESHOLD = 0.1  # start showing colour above this imbalance
 COLOUR_SATURATION_THRESHOLD = 0.5  # tune this: value at which colour becomes fully red
 
 def value_to_color(magnitude: float) -> tuple:
@@ -69,27 +46,51 @@ def value_to_color(magnitude: float) -> tuple:
 
     return (0, green, blue)  # BGR
 
-def build_display(frame, face_landmarks, facs_name, facs_value):
-    right_indexes = AU_TO_LM_ARR_DICT_RIGHT.get(facs_name, [])
-    left_indexes  = AU_TO_LM_ARR_DICT_LEFT.get(facs_name, [])
+def draw_landmarks(frame, face_landmarks, highlight_indexes=None,
+                   highlight_color=(0, 255, 0), dot_radius=1):
+    if highlight_indexes is None:
+        highlight_indexes = []
 
-    magnitude = np.clip(abs(facs_value), 0.0, 1.0)  # clamp to [0,1] for color blend
-    blend_color = value_to_color(magnitude)
+    highlight_indexes = ensure_flat(highlight_indexes)
 
-    # Right side magnitude, left side by green
-    if facs_value >= 1.0:
-        draw_landmarks(frame, face_landmarks, highlight_indexes=left_indexes, highlight_color=(0, 255, 0))
-        draw_landmarks(frame, face_landmarks, highlight_indexes=right_indexes, highlight_color=blend_color)
-        
+    h, w = frame.shape[:2]
 
-    elif facs_value <= -1.0:
-        draw_landmarks(frame, face_landmarks, highlight_indexes=right_indexes, highlight_color=(0, 255, 0))
-        draw_landmarks(frame, face_landmarks, highlight_indexes=left_indexes, highlight_color=blend_color)
-    else:
-        draw_landmarks(frame, face_landmarks, highlight_indexes=right_indexes + left_indexes, highlight_color=(0, 255, 0))
+    for idx in highlight_indexes:
+        lm = face_landmarks[idx]
+        x = int(lm.x * w)
+        y = int(lm.y * h)
+        cv2.circle(frame, (x, y), dot_radius, highlight_color, -1)
 
     return frame
 
+
+def build_display(frame, face_landmarks, facs_name, facs_value, dot_radius=1):
+    right_indexes = AU_TO_LM_ARR_DICT_RIGHT.get(facs_name, [])
+    left_indexes  = AU_TO_LM_ARR_DICT_LEFT.get(facs_name, [])
+
+    # Pass raw value — value_to_color handles normalisation internally
+    blend_color = value_to_color(facs_value)
+
+    if facs_value >= IMBALANCE_DISPLAY_THRESHOLD:
+        # Right side is the weaker/imbalanced side → colour it
+        draw_landmarks(frame, face_landmarks, highlight_indexes=left_indexes,
+                       highlight_color=(0, 255, 0), dot_radius=dot_radius)
+        draw_landmarks(frame, face_landmarks, highlight_indexes=right_indexes,
+                       highlight_color=blend_color, dot_radius=dot_radius)
+
+    elif facs_value <= -IMBALANCE_DISPLAY_THRESHOLD:
+        draw_landmarks(frame, face_landmarks, highlight_indexes=right_indexes,
+                       highlight_color=(0, 255, 0), dot_radius=dot_radius)
+        draw_landmarks(frame, face_landmarks, highlight_indexes=left_indexes,
+                       highlight_color=blend_color, dot_radius=dot_radius)
+
+    else:
+        # Near-zero imbalance — both sides green
+        draw_landmarks(frame, face_landmarks,
+                       highlight_indexes=right_indexes + left_indexes,
+                       highlight_color=(0, 255, 0), dot_radius=dot_radius)
+
+    return frame
 
 def get_facs_balance_val(face_landmarks, facs_balance_detector_list):
 
@@ -102,7 +103,7 @@ def get_facs_balance_val(face_landmarks, facs_balance_detector_list):
     return facs_balance_val_dict
 
 
-def label_img(frame, lm_detector, facs_balance_detector_list, add_text_label=False, check_frontal=True):
+def label_img(frame, lm_detector, facs_balance_detector_list, add_text_label=False, check_frontal=True, dot_radius=2):
     lm, yaw_deg, pitch_deg, roll_deg, rot_mat = lm_detector.detect(frame)
 
     is_frontal = (abs(yaw_deg)   < YAW_THRESHOLD_DEG and
@@ -117,7 +118,7 @@ def label_img(frame, lm_detector, facs_balance_detector_list, add_text_label=Fal
     for i,  facs_balance_detector in enumerate(facs_balance_detector_list):
         facs_balance_val = facs_balance_detector.get_FACS_balance_val(lm) 
 
-        frame = build_display(frame, lm, facs_balance_detector.name, facs_balance_val)
+        frame = build_display(frame, lm, facs_balance_detector.name, facs_balance_val, dot_radius=dot_radius)
 
         if add_text_label:
             label = f"{facs_balance_detector.name}: {facs_balance_val:.3f}"
@@ -132,18 +133,45 @@ def label_img(frame, lm_detector, facs_balance_detector_list, add_text_label=Fal
     return frame
 
 
-def main_video(lm_detector, facs_balance_detector_list, add_text_label=True):
-    cap = cv2.VideoCapture(0)
+def main_video(lm_detector, facs_balance_detector_list, add_text_label=True, video_path=None, render_video=True, save_video_fps=25.0, out_path=None):
+
+    if video_path is not None:
+        cap = cv2.VideoCapture(video_path)
+        # Set up writer using source video properties
+        fps    = cap.get(cv2.CAP_PROP_FPS) or save_video_fps
+        width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        base, ext = os.path.splitext(video_path)
+        if out_path is None:
+            out_path  = f"{base}_labelled.mp4"
+        else:
+            out_path = os.path.join(out_path, os.path.basename(f"{base}_labelled.mp4"))
+        fourcc    = cv2.VideoWriter_fourcc(*"mp4v")
+        writer    = cv2.VideoWriter(out_path, fourcc, fps, (width, height))
+        print(f"[INFO] Saving labelled video to: {out_path}")
+    else:
+        cap    = cv2.VideoCapture(0)
+        writer = None
+
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
 
-        cv2.imshow("application", label_img(frame, lm_detector, facs_balance_detector_list, add_text_label=add_text_label))
+        labelled = label_img(frame, lm_detector, facs_balance_detector_list, add_text_label=add_text_label)
+
+        if writer is not None:
+            writer.write(labelled)
+        if render_video:
+            cv2.imshow("application", labelled)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
     cap.release()
+    if writer is not None:
+        writer.release()
+        print(f"[SAVED] {out_path}")
     cv2.destroyAllWindows()
 
 
@@ -232,16 +260,25 @@ if __name__ == "__main__":
     facs_balance_detector_list = [detector() for detector in FACS_IMBALANCE_DETECTOR_LIST]
 
 
-    # main_video(lm_detector, facs_balance_detector_list)
+    datapath = r"E:\Shui Jie\hackathon\huawei_tech4city\code\Symmetra\data\YouTube-Facial-Palsy-Database\good_videos\unlabelled_videos"
+    outpath  = r"E:\Shui Jie\hackathon\huawei_tech4city\code\Symmetra\data\YouTube-Facial-Palsy-Database\good_videos\labelled_videos"
+    for video_name in os.listdir(datapath):
+        video_path = os.path.join(datapath, video_name)
+        if os.path.isfile(video_path) and os.path.splitext(video_path)[1].lower() in {".mp4", ".avi", ".mov", ".mkv"}:
+            print(f"[PROCESSING VIDEO] {video_path}")
+            main_video(lm_detector, facs_balance_detector_list, add_text_label=False, video_path=video_path, save_video_fps=6.0, render_video=False, out_path=outpath)
+
+
+    main_video(lm_detector, facs_balance_detector_list)
 
     img_folder_path = "./data/facial_palsy_patient_img/not_labelled"
 
-    main_label_image(
-        input_image_or_path=img_folder_path,
-        lm_detector=lm_detector,
-        facs_balance_detector_list=facs_balance_detector_list,
-        output_folder_path="./data/facial_palsy_patient_img/labelled",
-        add_text_label=True,
-        show_image=True,
-        save_image=True
-    )
+    # main_label_image(
+    #     input_image_or_path=img_folder_path,
+    #     lm_detector=lm_detector,
+    #     facs_balance_detector_list=facs_balance_detector_list,
+    #     output_folder_path="./data/facial_palsy_patient_img/labelled",
+    #     add_text_label=True,
+    #     show_image=True,
+    #     save_image=True
+    # )
