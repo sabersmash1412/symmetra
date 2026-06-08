@@ -317,7 +317,8 @@ export function FacialAnalysisApp() {
           </div>
           <div>
             <p className="eyebrow">Symmetra</p>
-            <h1>Facial movement monitor</h1>
+            <h1>This is an early-stage Proof of Concept under Active Development</h1>
+            <h3>We are currently in stealth and appreciate any feedback</h3>
           </div>
         </div>
 
