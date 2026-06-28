@@ -531,7 +531,7 @@ h1 {
   color: var(--ink);
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 0.9fr 0.8fr 1.3fr;
   padding: 10px;
 }
 
@@ -544,6 +544,18 @@ h1 {
   font-size: 20px;
   line-height: 1;
   margin-top: 4px;
+}
+
+.score-strip strong.ok {
+  color: var(--teal-dark);
+}
+
+.score-strip strong.warn {
+  color: var(--coral);
+}
+
+.score-strip .wide strong {
+  font-size: 16px;
 }
 
 .alignment-banner {

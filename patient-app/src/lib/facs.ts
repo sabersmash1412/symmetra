@@ -1,4 +1,4 @@
-export const ALGORITHM_VERSION = "symmetra-fau-v2-pose-normalized";
+export const ALGORITHM_VERSION = "symmetra-fau-v3-pose-gated-robust";
 
 export type Landmark = {
   x: number;
@@ -172,7 +172,7 @@ function degreesToRadians(value: number) {
 }
 
 export function summarizeMetricSamples(samples: FauMetric[][]): SessionSummary | null {
-  if (!samples.length) {
+  if (samples.length < 12) {
     return null;
   }
 
@@ -181,8 +181,8 @@ export function summarizeMetricSamples(samples: FauMetric[][]): SessionSummary |
       .map((sample) => sample.find((metric) => metric.id === definition.id))
       .filter((metric): metric is FauMetric => Boolean(metric));
 
-    const balance = average(values.map((metric) => metric.balance));
-    const symmetryScore = Math.round(average(values.map((metric) => metric.symmetryScore)));
+    const balance = median(values.map((metric) => metric.balance));
+    const symmetryScore = Math.round(median(values.map((metric) => metric.symmetryScore)));
 
     return {
       id: definition.id,
@@ -206,7 +206,7 @@ export function getOverallSymmetryScore(metrics: FauMetric[]) {
     return 0;
   }
 
-  return Math.round(average(metrics.map((metric) => metric.symmetryScore)));
+  return Math.round(median(metrics.map((metric) => metric.symmetryScore)));
 }
 
 export function getRelevantLandmarkIndexes() {
@@ -314,6 +314,20 @@ function average(values: number[]) {
   }
 
   return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function median(values: number[]) {
+  if (!values.length) {
+    return 0;
+  }
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const midpoint = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) {
+    return sorted[midpoint];
+  }
+
+  return (sorted[midpoint - 1] + sorted[midpoint]) / 2;
 }
 
 function distance(a: Landmark, b: Landmark) {

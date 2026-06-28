@@ -36,11 +36,21 @@ type AlignmentQuality = {
   isAligned: boolean;
   label: string;
 };
+type PoseGate = {
+  isStable: boolean;
+  label: string;
+};
 
 const MODEL_PATH = "/models/face_landmarker.task";
 const RECORDING_MS = 12000;
-const MAX_OFF_ALIGNMENT_MS = 900;
+const MAX_OFF_ALIGNMENT_MS = 450;
+const STRICT_POSE_THRESHOLDS = {
+  yaw: 2.5,
+  pitch: 7,
+  roll: 2.5
+};
 const emptyAlignment: AlignmentQuality = { isAligned: false, label: "Center face" };
+const emptyPoseGate: PoseGate = { isStable: false, label: "Straighten face" };
 
 export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; onComplete: (result: CaptureResult) => void }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -51,6 +61,7 @@ export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; on
   const metricsSamplesRef = useRef<FauMetric[][]>([]);
   const qualitySamplesRef = useRef<number[]>([]);
   const recordingStartedAtRef = useRef<number>(0);
+  const validRecordingMsRef = useRef<number>(0);
   const lastFrameAtRef = useRef<number>(0);
   const offAlignmentMsRef = useRef<number>(0);
   const recorderRef = useRef<ReturnType<typeof createRecorder>>(null);
@@ -62,10 +73,11 @@ export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; on
   const [pose, setPose] = useState<HeadPose | null>(null);
   const [quality, setQuality] = useState<PoseQuality>(emptyQuality);
   const [alignment, setAlignment] = useState<AlignmentQuality>(emptyAlignment);
+  const [poseGate, setPoseGate] = useState<PoseGate>(emptyPoseGate);
   const [elapsedMs, setElapsedMs] = useState(0);
 
   const isRecording = state === "recording";
-  const isCaptureReady = quality.isFrontal && alignment.isAligned && metrics.length > 0;
+  const isCaptureReady = poseGate.isStable && alignment.isAligned && metrics.length > 0;
   const progress = isRecording ? Math.min(1, elapsedMs / RECORDING_MS) : 0;
   const overallScore = useMemo(() => getOverallSymmetryScore(metrics), [metrics]);
 
@@ -132,6 +144,8 @@ export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; on
 
     const startedAt = recordingStartedAtRef.current;
     recordingStartedAtRef.current = 0;
+    const validDurationMs = validRecordingMsRef.current;
+    validRecordingMsRef.current = 0;
     setState("processing");
     setStatus("Preparing review");
     recorderRef.current?.stop();
@@ -146,7 +160,7 @@ export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; on
 
     stopResources();
     onComplete({
-      durationMs: Math.round(performance.now() - startedAt),
+      durationMs: Math.round(validDurationMs || performance.now() - startedAt),
       qualityScore: Math.round(average(qualitySamplesRef.current)),
       overallSymmetryScore: summary.overallSymmetryScore,
       metrics: summary.metrics,
@@ -163,6 +177,7 @@ export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; on
     metricsSamplesRef.current = [];
     qualitySamplesRef.current = [];
     offAlignmentMsRef.current = 0;
+    validRecordingMsRef.current = 0;
     lastFrameAtRef.current = performance.now();
     recordingStartedAtRef.current = performance.now();
     recorderRef.current = createRecorder(stream);
@@ -178,6 +193,7 @@ export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; on
     metricsSamplesRef.current = [];
     qualitySamplesRef.current = [];
     offAlignmentMsRef.current = 0;
+    validRecordingMsRef.current = 0;
     setElapsedMs(0);
     setState("live");
     setStatus(message);
@@ -216,19 +232,21 @@ export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; on
         const faceLandmarks = result.faceLandmarks?.[0];
         const nextPose = rotationMatrixToEuler(result.facialTransformationMatrixes?.[0]);
         const nextQuality = getPoseQuality(nextPose);
+        const nextPoseGate = getStrictPoseGate(nextPose);
 
         if (faceLandmarks?.length) {
           const nextMetrics = computeFauMetrics(faceLandmarks, nextPose);
           const nextAlignment = getAlignmentQuality(faceLandmarks);
-          const ready = nextQuality.isFrontal && nextAlignment.isAligned;
+          const ready = nextPoseGate.isStable && nextAlignment.isAligned;
           drawLandmarkOverlay(context, faceLandmarks, nextMetrics);
           setMetrics(nextMetrics);
           setPose(nextPose);
           setQuality(nextQuality);
           setAlignment(nextAlignment);
-          setStatus(getCaptureStatus(nextQuality, nextAlignment, recordingStartedAtRef.current > 0));
+          setPoseGate(nextPoseGate);
+          setStatus(getCaptureStatus(nextPoseGate, nextAlignment, recordingStartedAtRef.current > 0));
 
-          if (recordingStartedAtRef.current > 0 && performance.now() - recordingStartedAtRef.current <= RECORDING_MS) {
+          if (recordingStartedAtRef.current > 0 && validRecordingMsRef.current <= RECORDING_MS) {
             const now = performance.now();
             const frameDelta = Math.min(now - lastFrameAtRef.current, 250);
             lastFrameAtRef.current = now;
@@ -236,11 +254,13 @@ export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; on
             if (ready) {
               metricsSamplesRef.current.push(nextMetrics);
               qualitySamplesRef.current.push(nextQuality.score);
+              validRecordingMsRef.current = Math.min(RECORDING_MS, validRecordingMsRef.current + frameDelta);
+              setElapsedMs(validRecordingMsRef.current);
               offAlignmentMsRef.current = Math.max(0, offAlignmentMsRef.current - frameDelta);
             } else {
               offAlignmentMsRef.current += frameDelta;
               if (offAlignmentMsRef.current > MAX_OFF_ALIGNMENT_MS) {
-                failRecording("Alignment moved. Retake when the outline stays green.");
+                failRecording("Head moved. Retake while yaw, pitch, and roll stay green.");
                 animationFrameRef.current = requestAnimationFrame(draw);
                 return;
               }
@@ -249,15 +269,14 @@ export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; on
         } else {
           setQuality(emptyQuality);
           setAlignment(emptyAlignment);
+          setPoseGate(emptyPoseGate);
           setPose(null);
           setStatus("No face detected");
         }
       }
 
       if (recordingStartedAtRef.current > 0) {
-        const elapsed = performance.now() - recordingStartedAtRef.current;
-        setElapsedMs(elapsed);
-        if (elapsed >= RECORDING_MS) {
+        if (validRecordingMsRef.current >= RECORDING_MS) {
           finishRecording();
           return;
         }
@@ -303,19 +322,19 @@ export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; on
         <div className="score-strip">
           <div>
             <span>Live score</span>
-            <strong>{metrics.length ? overallScore : "--"}</strong>
+            <strong>{isCaptureReady ? overallScore : "--"}</strong>
           </div>
           <div>
             <span>Yaw</span>
-            <strong>{pose ? pose.yaw.toFixed(1) : "--"}</strong>
+            <strong className={poseGate.isStable ? "ok" : "warn"}>{pose ? pose.yaw.toFixed(1) : "--"}</strong>
           </div>
-          <div>
-            <span>Roll</span>
-            <strong>{pose ? pose.roll.toFixed(1) : "--"}</strong>
+          <div className="wide">
+            <span>Pitch / Roll</span>
+            <strong className={poseGate.isStable ? "ok" : "warn"}>{pose ? `${pose.pitch.toFixed(1)} / ${pose.roll.toFixed(1)}` : "--"}</strong>
           </div>
         </div>
         <div className={`alignment-banner ${isCaptureReady ? "ready" : ""}`}>
-          {isCaptureReady ? "Aligned. Keep your face inside the outline." : alignment.label}
+          {isCaptureReady ? "Aligned. Timer only advances while this stays green." : poseGate.isStable ? alignment.label : poseGate.label}
         </div>
 
         <div className="recording-progress" aria-hidden="true">
@@ -457,8 +476,28 @@ function getFaceBounds(landmarks: Landmark[]) {
   );
 }
 
-function getCaptureStatus(quality: PoseQuality, alignment: AlignmentQuality, isRecording: boolean) {
-  if (!quality.isFrontal) {
+function getStrictPoseGate(pose: HeadPose | null): PoseGate {
+  if (!pose) {
+    return emptyPoseGate;
+  }
+
+  if (Math.abs(pose.yaw) > STRICT_POSE_THRESHOLDS.yaw) {
+    return { isStable: false, label: pose.yaw < 0 ? "Turn slightly right" : "Turn slightly left" };
+  }
+
+  if (Math.abs(pose.roll) > STRICT_POSE_THRESHOLDS.roll) {
+    return { isStable: false, label: pose.roll < 0 ? "Tilt head clockwise" : "Tilt head counterclockwise" };
+  }
+
+  if (Math.abs(pose.pitch) > STRICT_POSE_THRESHOLDS.pitch) {
+    return { isStable: false, label: pose.pitch < 0 ? "Lift chin slightly" : "Lower chin slightly" };
+  }
+
+  return { isStable: true, label: "Pose stable" };
+}
+
+function getCaptureStatus(poseGate: PoseGate, alignment: AlignmentQuality, isRecording: boolean) {
+  if (!poseGate.isStable) {
     return isRecording ? "Hold straight" : "Straighten face";
   }
 
