@@ -1,0 +1,19 @@
+{
+  "name": "Symmetra Patient",
+  "short_name": "Symmetra",
+  "description": "Daily face symmetry progress tracking",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f8f2",
+  "theme_color": "#116a5c",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
