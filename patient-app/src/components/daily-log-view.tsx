@@ -1,6 +1,6 @@
 "use client";
 
-import { Film, RefreshCw } from "lucide-react";
+import { CalendarPlus, Film, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getSignedVideoUrl } from "@/src/lib/sessions";
 import { DailySession, getLocalVideo } from "@/src/lib/storage";
@@ -56,7 +56,7 @@ export function DailyLogView({ sessions, onRefresh }: { sessions: DailySession[]
         </button>
       </div>
 
-      <div className="session-list">
+      <div className="session-list timeline-list">
         {sessions.map((session) => (
           <button
             className={`session-row buttonless ${selected?.id === session.id ? "selected" : ""}`}
@@ -71,12 +71,18 @@ export function DailyLogView({ sessions, onRefresh }: { sessions: DailySession[]
             <b>{session.overallSymmetryScore}</b>
           </button>
         ))}
-        {!sessions.length && <div className="empty-state">No daily check-ins yet.</div>}
+        {!sessions.length && (
+          <div className="empty-state polished tall">
+            <CalendarPlus size={24} />
+            <strong>No daily check-ins yet</strong>
+            <span>Start from Today and your saved scores will build into a simple recovery log.</span>
+          </div>
+        )}
       </div>
 
       {selected && (
-        <section className="panel">
-          <div className="panel-title">Session detail</div>
+        <section className="section-block">
+          <div className="section-label">Session detail</div>
           {videoUrl ? (
             <video className="playback" controls playsInline src={videoUrl} />
           ) : (

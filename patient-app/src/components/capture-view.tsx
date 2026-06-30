@@ -334,7 +334,13 @@ export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; on
           </div>
         </div>
         <div className={`alignment-banner ${isCaptureReady ? "ready" : ""}`}>
-          {isCaptureReady ? "Aligned. Timer only advances while this stays green." : poseGate.isStable ? alignment.label : poseGate.label}
+          {state === "idle"
+            ? "Start camera to begin alignment."
+            : isCaptureReady
+              ? "Aligned. Timer only advances while this stays green."
+              : poseGate.isStable
+                ? alignment.label
+                : poseGate.label}
         </div>
 
         <div className="recording-progress" aria-hidden="true">
@@ -349,7 +355,7 @@ export function CaptureView({ onCancel, onComplete }: { onCancel: () => void; on
         ) : (
           <button className="button primary large full" disabled={state !== "live" || !isCaptureReady} type="button" onClick={startRecording}>
             <Camera size={18} />
-            {isCaptureReady ? "Record 12 second check-in" : "Align face to start"}
+            {state === "idle" ? "Start camera first" : isCaptureReady ? "Record 12 second check-in" : "Align face to start"}
           </button>
         )}
       </div>

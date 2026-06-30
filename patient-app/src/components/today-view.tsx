@@ -1,26 +1,29 @@
 "use client";
 
-import { CalendarCheck, Camera, Cloud, CloudOff } from "lucide-react";
+import { Activity, ArrowRight, CalendarCheck, Camera, Cloud, CloudOff, ScanFace, ShieldCheck } from "lucide-react";
 import { DailySession } from "@/src/lib/storage";
 
 export function TodayView({
   sessions,
   isOnline,
   onStart,
+  onOpenExercises,
   onOpenInstall
 }: {
   sessions: DailySession[];
   isOnline: boolean;
   onStart: () => void;
+  onOpenExercises: () => void;
   onOpenInstall: () => void;
 }) {
   const todayKey = new Date().toISOString().slice(0, 10);
   const todaySession = sessions.find((session) => session.dateKey === todayKey);
   const latest = sessions[0];
+  const latestScore = latest?.overallSymmetryScore ?? null;
 
   return (
     <section className="view-stack">
-      <div className="hero-panel">
+      <div className="today-hero">
         <div className="hero-topline">
           <span className={`sync-chip ${isOnline ? "ready" : ""}`}>
             {isOnline ? <Cloud size={15} /> : <CloudOff size={15} />}
@@ -30,27 +33,54 @@ export function TodayView({
             Install
           </button>
         </div>
-        <h1>{todaySession ? "Today is logged" : "Ready for today?"}</h1>
-        <p>
-          {todaySession
-            ? "Your check-in is saved. You can record again if you want a cleaner daily sample."
-            : "Record one short face check-in and save your symmetry values to the daily log."}
-        </p>
-        <button className="button primary large" type="button" onClick={onStart}>
-          <Camera size={18} />
-          Start check-in
+
+        <div className="hero-score-row">
+          <div className="score-orbit" style={{ "--score": latestScore ?? 0 } as React.CSSProperties}>
+            <div>
+              <strong>{latestScore ?? "--"}</strong>
+              <span>{latestScore === null ? "No score" : "Latest"}</span>
+            </div>
+          </div>
+          <div className="hero-copy">
+            <p className="eyebrow">{todaySession ? "Complete today" : "Today"}</p>
+            <h1>{todaySession ? "Your check-in is saved." : "Ready for a steady check-in?"}</h1>
+            <p>
+              {todaySession
+                ? "Record again only if the first capture felt off. The daily log keeps your values organized."
+                : "A guided 12-second capture measures symmetry values while your head stays aligned."}
+            </p>
+          </div>
+        </div>
+
+        <button className="primary-cta" type="button" onClick={onStart}>
+          <span>
+            <Camera size={19} />
+            Start check-in
+          </span>
+          <ArrowRight size={19} />
+        </button>
+
+        <button className="secondary-cta" type="button" onClick={onOpenExercises}>
+          <span>
+            <Activity size={18} />
+            Facial rehab exercises
+          </span>
+          <ArrowRight size={18} />
         </button>
       </div>
 
-      <div className="summary-row">
-        <SummaryCard label="Latest score" value={latest ? `${latest.overallSymmetryScore}` : "--"} unit="/100" />
+      <div className="insight-grid">
         <SummaryCard label="Log entries" value={`${sessions.length}`} unit="" />
+        <SummaryCard label="Capture mode" value="12s" unit="" />
       </div>
 
-      <section className="panel">
-        <div className="panel-title">
-          <CalendarCheck size={16} />
-          Recent daily log
+      <section className="section-block">
+        <div className="section-label">
+          <span>
+            <CalendarCheck size={16} />
+            Recent daily log
+          </span>
+          <ShieldCheck size={16} />
         </div>
         <div className="session-list compact">
           {sessions.slice(0, 3).map((session) => (
@@ -62,7 +92,13 @@ export function TodayView({
               <b>{session.overallSymmetryScore}</b>
             </article>
           ))}
-          {!sessions.length && <div className="empty-state">No saved check-ins yet.</div>}
+          {!sessions.length && (
+            <div className="empty-state polished">
+              <ScanFace size={22} />
+              <strong>No check-ins yet</strong>
+              <span>Your first capture will appear here with its score and sync status.</span>
+            </div>
+          )}
         </div>
       </section>
     </section>
@@ -71,7 +107,7 @@ export function TodayView({
 
 function SummaryCard({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="summary-card">
+    <div className="stat-tile">
       <span>{label}</span>
       <strong>
         {value}

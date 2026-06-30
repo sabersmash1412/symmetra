@@ -1,11 +1,12 @@
 "use client";
 
-import { CalendarDays, ChartNoAxesColumnIncreasing, Home, LogOut, ShieldCheck } from "lucide-react";
+import { Activity, CalendarDays, ChartNoAxesColumnIncreasing, Home, LogOut, ScanFace, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { AuthView } from "@/src/components/auth-view";
 import { CaptureResult, CaptureView } from "@/src/components/capture-view";
 import { DailyLogView } from "@/src/components/daily-log-view";
+import { ExerciseView } from "@/src/components/exercise-view";
 import { InstallHelp } from "@/src/components/install-help";
 import { ReviewView } from "@/src/components/review-view";
 import { TodayView } from "@/src/components/today-view";
@@ -21,7 +22,7 @@ import {
   type StoredVideo
 } from "@/src/lib/storage";
 
-type AppView = "today" | "capture" | "review" | "log" | "trends" | "install";
+type AppView = "today" | "capture" | "review" | "exercise" | "log" | "trends" | "install";
 
 export function PatientApp() {
   const [user, setUser] = useState<User | null>(null);
@@ -192,9 +193,14 @@ export function PatientApp() {
     return (
       <main className="app-shell">
         <header className="mobile-header">
-          <div>
-            <p className="eyebrow">Symmetra</p>
-            <h1>Daily progress log</h1>
+          <div className="brand-cluster">
+            <div className="brand-glyph">
+              <ScanFace size={18} />
+            </div>
+            <div>
+              <p className="eyebrow">Symmetra</p>
+              <h1>Daily progress log</h1>
+            </div>
           </div>
           <button className="icon-button" title="Sign out" type="button" onClick={signOut}>
             <LogOut size={17} />
@@ -202,7 +208,13 @@ export function PatientApp() {
         </header>
 
         {view === "today" && (
-          <TodayView sessions={sessions} isOnline={isOnline} onStart={() => setView("capture")} onOpenInstall={() => setView("install")} />
+          <TodayView
+            sessions={sessions}
+            isOnline={isOnline}
+            onStart={() => setView("capture")}
+            onOpenExercises={() => setView("exercise")}
+            onOpenInstall={() => setView("install")}
+          />
         )}
         {view === "review" && captureResult && (
           <ReviewView
@@ -213,6 +225,7 @@ export function PatientApp() {
             onSave={saveReview}
           />
         )}
+        {view === "exercise" && <ExerciseView />}
         {view === "log" && <DailyLogView sessions={sessions} onRefresh={refreshSessions} />}
         {view === "trends" && <TrendsView sessions={sessions} />}
         {view === "install" && <InstallHelp onDone={() => setView("today")} />}
@@ -267,6 +280,7 @@ function ConsentView({ onAccept }: { onAccept: (videoEnabled: boolean) => void }
 function BottomNav({ current, onChange }: { current: AppView; onChange: (view: AppView) => void }) {
   const items = [
     { id: "today" as const, label: "Today", icon: Home },
+    { id: "exercise" as const, label: "Exercise", icon: Activity },
     { id: "log" as const, label: "Log", icon: CalendarDays },
     { id: "trends" as const, label: "Trends", icon: ChartNoAxesColumnIncreasing }
   ];
