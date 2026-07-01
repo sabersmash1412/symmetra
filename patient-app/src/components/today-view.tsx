@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ArrowRight, CalendarCheck, Camera, Cloud, CloudOff, ScanFace, ShieldCheck } from "lucide-react";
+import { Activity, ArrowRight, CalendarCheck, Camera, Cloud, CloudOff, ScanFace, ShieldCheck, Sparkles } from "lucide-react";
 import { DailySession } from "@/src/lib/storage";
 
 export function TodayView({
@@ -8,12 +8,14 @@ export function TodayView({
   isOnline,
   onStart,
   onOpenExercises,
+  onOpenMirror,
   onOpenInstall
 }: {
   sessions: DailySession[];
   isOnline: boolean;
   onStart: () => void;
   onOpenExercises: () => void;
+  onOpenMirror: () => void;
   onOpenInstall: () => void;
 }) {
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -64,6 +66,14 @@ export function TodayView({
           <span>
             <Activity size={18} />
             Facial rehab exercises
+          </span>
+          <ArrowRight size={18} />
+        </button>
+
+        <button className="secondary-cta mirror" type="button" onClick={onOpenMirror}>
+          <span>
+            <Sparkles size={18} />
+            Mirror therapy practice
           </span>
           <ArrowRight size={18} />
         </button>

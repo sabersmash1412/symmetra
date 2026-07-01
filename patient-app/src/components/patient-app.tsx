@@ -8,6 +8,7 @@ import { CaptureResult, CaptureView } from "@/src/components/capture-view";
 import { DailyLogView } from "@/src/components/daily-log-view";
 import { ExerciseView } from "@/src/components/exercise-view";
 import { InstallHelp } from "@/src/components/install-help";
+import { MirrorTherapyView } from "@/src/components/mirror-therapy-view";
 import { ReviewView } from "@/src/components/review-view";
 import { TodayView } from "@/src/components/today-view";
 import { TrendsView } from "@/src/components/trends-view";
@@ -22,7 +23,7 @@ import {
   type StoredVideo
 } from "@/src/lib/storage";
 
-type AppView = "today" | "capture" | "review" | "exercise" | "log" | "trends" | "install";
+type AppView = "today" | "capture" | "review" | "exercise" | "mirror" | "log" | "trends" | "install";
 
 export function PatientApp() {
   const [user, setUser] = useState<User | null>(null);
@@ -213,6 +214,7 @@ export function PatientApp() {
             isOnline={isOnline}
             onStart={() => setView("capture")}
             onOpenExercises={() => setView("exercise")}
+            onOpenMirror={() => setView("mirror")}
             onOpenInstall={() => setView("install")}
           />
         )}
@@ -226,6 +228,7 @@ export function PatientApp() {
           />
         )}
         {view === "exercise" && <ExerciseView />}
+        {view === "mirror" && <MirrorTherapyView />}
         {view === "log" && <DailyLogView sessions={sessions} onRefresh={refreshSessions} />}
         {view === "trends" && <TrendsView sessions={sessions} />}
         {view === "install" && <InstallHelp onDone={() => setView("today")} />}
