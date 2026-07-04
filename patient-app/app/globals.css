@@ -205,33 +205,47 @@ h1 {
 
 .score-orbit {
   --score: 0;
-  align-items: center;
   aspect-ratio: 1;
   background:
     radial-gradient(circle at center, #fff 0 58%, transparent 59%),
     conic-gradient(var(--teal) calc(var(--score) * 1%), #e5ebe7 0);
   border-radius: 999px;
-  display: grid;
-  place-items: center;
+  position: relative;
 }
 
-.score-orbit div {
+.score-orbit-content {
   align-items: center;
   display: flex;
   flex-direction: column;
+  gap: 7px;
+  inset: 0;
+  justify-content: center;
+  line-height: 1;
+  position: absolute;
+  text-align: center;
+  transform: translateY(4%);
+}
+
+.score-orbit-content strong,
+.score-orbit-content span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .score-orbit strong {
   font-size: 34px;
   letter-spacing: 0;
-  line-height: 0.9;
+  line-height: 1;
+  min-height: 34px;
 }
 
 .score-orbit span {
   color: var(--muted);
   font-size: 11px;
   font-weight: 900;
-  margin-top: 5px;
+  line-height: 1;
+  min-height: 12px;
   text-transform: uppercase;
 }
 
@@ -963,8 +977,8 @@ h1 {
 .exercise-timer {
   align-items: center;
   display: grid;
-  gap: 14px;
-  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 12px;
+  grid-template-columns: minmax(112px, 128px) minmax(0, 1fr);
 }
 
 .timer-ring {
@@ -975,33 +989,64 @@ h1 {
     radial-gradient(circle at center, #fff 0 58%, transparent 59%),
     conic-gradient(var(--teal) calc(var(--timer) * 100%), #e6ece8 0);
   border-radius: 999px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.timer-ring strong {
+.ring-value-stack {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transform: translateY(4px);
+}
+
+.ring-value-stack strong {
   display: block;
-  font-size: 36px;
-  line-height: 0.9;
+  font-size: 34px;
+  line-height: 0.82;
   text-align: center;
 }
 
-.timer-ring span,
-.exercise-timer > div:last-child span {
+.ring-value-stack span {
   color: var(--muted);
   display: block;
   font-size: 12px;
   font-weight: 900;
-  margin-top: 5px;
+  line-height: 1;
+  margin-top: 9px;
   text-align: center;
   text-transform: uppercase;
 }
 
-.exercise-timer > div:last-child strong {
+.reps-tile {
+  align-items: center;
+  align-self: stretch;
+  background: #f5f8f6;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+  padding: 14px 10px;
+}
+
+.reps-tile span,
+.reps-tile small {
+  color: var(--muted);
   display: block;
-  font-size: 48px;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.reps-tile strong {
+  display: block;
+  font-size: 36px;
   line-height: 1;
-  margin-top: 6px;
+  margin: 7px 0 4px;
 }
 
 .exercise-cue {

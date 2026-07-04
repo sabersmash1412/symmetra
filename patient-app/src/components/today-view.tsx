@@ -38,7 +38,7 @@ export function TodayView({
 
         <div className="hero-score-row">
           <div className="score-orbit" style={{ "--score": latestScore ?? 0 } as React.CSSProperties}>
-            <div>
+            <div className="score-orbit-content">
               <strong>{latestScore ?? "--"}</strong>
               <span>{latestScore === null ? "No score" : "Latest"}</span>
             </div>

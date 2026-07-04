@@ -152,12 +152,15 @@ export function ExerciseView() {
 
         <div className="exercise-timer">
           <div className="timer-ring" style={{ "--timer": remainingSec / activeExercise.durationSec } as React.CSSProperties}>
-            <strong>{remainingSec}</strong>
-            <span>sec hold</span>
+            <div className="ring-value-stack">
+              <strong>{remainingSec}</strong>
+              <span>sec hold</span>
+            </div>
           </div>
-          <div>
-            <span>Suggested reps</span>
+          <div className="reps-tile">
+            <span>Reps</span>
             <strong>{activeExercise.reps}</strong>
+            <small>suggested</small>
           </div>
         </div>
 
